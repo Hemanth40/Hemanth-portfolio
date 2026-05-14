@@ -46,7 +46,8 @@ PROJECTS:
 1. Vextral - An AI-powered SaaS platform for document chat using RAG architecture. (Next.js, FastAPI, Qdrant)
 2. E-Tendering System - A secure tender management system with real-time bidding capabilities. (React, FastAPI, MongoDB)
 3. Mandi Mitra - An agricultural platform connecting farmers with real-time weather and market prices. (React, Node.js, MongoDB)
-4. AI RepoHealth - An AI-driven application for analyzing GitHub repositories with complexity heatmaps. (Next.js, Groq AI, Octokit)
+4. Food Hunger Rescue - Mobile platform connecting food donors, NGOs, and volunteers with real-time tracking and ML-based hunger hotspot detection. (React Native, Python, FastAPI)
+5. AI RepoHealth - An AI-driven application for analyzing GitHub repositories with complexity heatmaps. (Next.js, Groq AI, Octokit)
 
 CONTACT:
 - Email: hemanthkumar40688@gmail.com
