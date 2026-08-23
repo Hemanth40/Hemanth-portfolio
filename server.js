@@ -26,49 +26,30 @@ if (process.env.GEMINI_API_KEY) {
     genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 }
 
-// System Prompt representing Hemanth Kumar G
-const SYSTEM_PROMPT = `You are an AI professional assistant representing Hemanth Kumar G.
-Your goal is to provide accurate, professional, and concise information about Hemanth's background, skills, and projects to potential employers or clients.
+// Grounded Concise Anti-Hallucination System Prompt representing Hemanth Kumar G
+const SYSTEM_PROMPT = `You are the official AI representative for Hemanth Kumar G (Full-Stack & AI/ML Engineer).
+Your goal is to answer questions from recruiters and visitors in a friendly, conversational, and punchy manner.
 
-IDENTITY:
-- Professional, respectful, and articulate.
-- Speaks in a formal and confident tone.
-- Uses emojis sparingly and only when appropriate in a professional context.
-- KEEPS IT CONCISE (2-4 sentences max).
+STRICT CONCISENESS RULES:
+1. Keep EVERY response strictly between 2 to 3 concise sentences (under 60 words total).
+2. NEVER output markdown tables, walls of text, unrequested lists, or entire resume dumps.
+3. Answer ONLY the specific question asked. If asked a follow-up, answer seamlessly using prior conversation context.
+4. Always finish your thoughts cleanly without cutting off mid-sentence.
+5. ONLY mention facts, projects, and experience from the grounded facts below. NEVER invent projects.
 
-WHO IS HEMANTH?
-- A dedicated Full-Stack Developer from Kodagu, currently based in Bangalore, actively seeking entry-level or trainee software roles.
-- Holds an MCA (Master of Computer Applications) degree from VTU, Mysuru.
-- GitHub: github.com/Hemanth40
-- LinkedIn: www.linkedin.com/in/hemanth-kumar-g-84610a376
-
-SKILLS:
-- Languages: Python, JavaScript, TypeScript, C, C++
-- Frontend: React, Next.js, Vue.js, React Native (Expo), Tailwind CSS, Vanilla CSS/HTML
-- Backend: Node.js, Django, FastAPI, Express.js
-- Databases: PostgreSQL, MongoDB, MySQL, SQLite, Supabase
-- Cloud/Hosting: Vercel, Render, AWS, Google Cloud, Neon
-- Tools & Libraries: Git, GitHub Actions, n8n, Postman, Docker, Apache
-- AI/ML & Analytics: TensorFlow, PyTorch, Pandas, NumPy, Scikit-Learn, HuggingFace NLP, RAG Architecture, DBSCAN Clustering
-
-PROJECTS:
-1. Vextral - An AI-powered SaaS platform for document chat using RAG architecture. (Next.js, FastAPI, Supabase, Qdrant)
-2. E-Tendering System - A secure tender management system with real-time bidding capabilities. (React, FastAPI, MongoDB)
-3. Mandi Mitra - An agricultural platform connecting farmers with real-time weather and market prices. (React, Node.js, MongoDB)
-4. Food Hunger Rescue - Mobile platform connecting food donors, NGOs, and volunteers with real-time tracking, OSRM routing, and ML-based hunger hotspot detection using DBSCAN. (React Native, Python, FastAPI, SQLite)
-5. AI RepoHealth - An AI-driven application for analyzing GitHub repositories with complexity heatmaps. (Next.js, Groq AI, Octokit)
-6. MindGuard AI - Full-Stack Mental Wellness & AI Analytics Platform featuring a 4-Model ML stress prediction ensemble (hosted on HuggingFace), contextually-injected empathetic conversational companion (powered by Gemini), and specialized SEAL breathing guide. (React Native compiled via Expo SDK 54, FastAPI, SQLAlchemy, PostgreSQL hosted on Neon Cloud)
-
-CONTACT:
-- Email: hemanthkumar40688@gmail.com
-- Phone: +91 9591903407
-
-RULES:
-1. **Be Professional:** Maintain a polite and professional demeanor at all times.
-2. **Be Concise:** Keep answers strictly between 2 to 4 sentences. Avoid long paragraphs.
-3. **Helpful Context:** You may answer general technology questions professionally if they arise.
-4. **Growth Mindset:** If asked about a skill Hemanth does not currently possess, state: "Hemanth is a rapid learner and is always eager to acquire new skills to meet project requirements."
-5. **Stay on Topic:** Prioritize inquiries related to Hemanth's qualifications, projects, and professional experience.`;
+GROUNDED PROFILE FACTS:
+- Identity: Hemanth Kumar G, Full-Stack & AI/ML Engineer based in Bengaluru, India. Open to full-time Software Engineer, AI/ML, and Full-Stack roles.
+- Education: MCA from VTU, Mysuru (CGPA: 8.58/10, 2023–2025) | BCA from Mangalore University (CGPA: 7.0/10).
+- Core Stack: Python, FastAPI, React.js, Next.js, Node.js, PostgreSQL, MongoDB, Qdrant Vector DB, RAG pipelines.
+- 6 Real Projects:
+  1. Vextral AI: Document Q&A using RAG with Qdrant, FastAPI, and Gemini (responses in 1.15-1.7s, health-check <1ms).
+  2. MindGuard AI: Mental wellness platform with 4-model NLP ensemble & FastAPI (71% latency reduction via asyncio).
+  3. Mandi Mitra / KisanSetu: Agricultural intelligence & crop disease detection (published research paper at ETCST 2025).
+  4. E-Tendering System: Procurement and real-time bidding with React, FastAPI, MongoDB.
+  5. Food Hunger Rescue: Food logistics with DBSCAN hotspot clustering & OSRM routing.
+  6. AI RepoHealth: GitHub repository intelligence using Groq LLMs.
+- Experience: MERN Intern at AccioJob (04/2026-Present), Python Full-Stack Intern at Ethnotech Academy (12/2025-01/2026), Python AI/ML Intern at Dotch Endeavours (11/2024-01/2025).
+- Contact: hemanthkumar40688@gmail.com | +91 9591903407 | GitHub: https://github.com/Hemanth40`;
 
 app.post('/api/chat', async (req, res) => {
     try {
@@ -78,16 +59,24 @@ app.post('/api/chat', async (req, res) => {
             return res.status(400).json({ error: 'Message is required' });
         }
 
+        // Clean & truncate history for memory (last 10 messages)
+        const cleanHistory = Array.isArray(history) 
+            ? history.filter(h => h && h.role && h.content).slice(-10)
+            : [];
+
         // 1. Try Google Gemini API if key is available
         if (genAI) {
             try {
                 const model = genAI.getGenerativeModel({
                     model: 'gemini-1.5-flash',
-                    systemInstruction: SYSTEM_PROMPT
+                    systemInstruction: SYSTEM_PROMPT,
+                    generationConfig: {
+                        maxOutputTokens: 250,
+                        temperature: 0.4
+                    }
                 });
 
-                // Translate history format from {role: 'user'|'assistant', content} to {role: 'user'|'model', parts: [{text}]}
-                const geminiHistory = history.map(h => ({
+                const geminiHistory = cleanHistory.map(h => ({
                     role: h.role === 'assistant' ? 'model' : 'user',
                     parts: [{ text: h.content }]
                 }));
@@ -99,35 +88,58 @@ app.post('/api/chat', async (req, res) => {
                 const result = await chat.sendMessage(message);
                 const responseText = result.response.text();
 
-                return res.json({ response: responseText });
+                if (responseText) {
+                    return res.json({ response: responseText.trim() });
+                }
             } catch (geminiError) {
-                console.error('Gemini API call failed, falling back to Groq:', geminiError);
+                console.warn('Gemini API attempt failed, switching to Groq:', geminiError.message);
             }
         }
 
-        // 2. Fall back to Groq API if available
+        // 2. Try Groq API with active models
         if (groq) {
             const messages = [
                 { role: "system", content: SYSTEM_PROMPT },
-                ...history,
+                ...cleanHistory,
                 { role: "user", content: message }
             ];
 
-            const chatCompletion = await groq.chat.completions.create({
-                messages: messages,
-                model: "llama-3.3-70b-versatile",
-                temperature: 0.7,
-                max_tokens: 1000,
-            });
+            const supportedModels = [
+                "openai/gpt-oss-120b",
+                "openai/gpt-oss-20b",
+                "qwen/qwen3.6-27b",
+                "groq/compound",
+                "groq/compound-mini"
+            ];
 
-            return res.json({
-                response: chatCompletion.choices[0]?.message?.content || "Sorry, I couldn't generate a response."
-            });
+            for (const modelName of supportedModels) {
+                try {
+                    const chatCompletion = await groq.chat.completions.create({
+                        messages: messages,
+                        model: modelName,
+                        temperature: 0.3,
+                        max_tokens: 1000,
+                    });
+
+                    let reply = chatCompletion.choices[0]?.message?.content;
+                    if (reply) {
+                        // Strip any internal reasoning or thinking tags
+                        if (reply.includes('</think>')) {
+                            reply = reply.split('</think>').pop();
+                        } else if (reply.includes('<think>')) {
+                            reply = reply.replace(/<think>[\s\S]*?<\/think>/g, '');
+                        }
+                        return res.json({ response: reply.trim() });
+                    }
+                } catch (groqModelError) {
+                    console.warn(`Groq model ${modelName} error:`, groqModelError.message);
+                }
+            }
         }
 
-        // 3. Emergency response if no AI keys are available
+        // 3. Fallback response if active APIs are unavailable
         return res.json({
-            response: `Thank you for reaching out! I am Hemanth's offline AI representative. Currently, my active API connection is offline. You can contact Hemanth directly at hemanthkumar40688@gmail.com or call +91 9591903407. He is actively seeking entry-level software engineer roles and would love to connect!`
+            response: `Hemanth is a Full-Stack & AI/ML Engineer specializing in Python, FastAPI, React, and RAG architectures. Feel free to contact him directly at hemanthkumar40688@gmail.com or +91 9591903407!`
         });
 
     } catch (error) {
